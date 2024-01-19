@@ -16,11 +16,16 @@
 
 ## Features
 
-- **Show total of songs listened**
-- **Total time spent listened**
+- **Show total number of songs listened**
+- **Total time spent listening**
+- **Show the first and last played songs**
 - **Show the top 5 most played songs**
 - **Show the top 5 most played artists**
+- **Show the most skipped songs**
 - **Show the average song duration**
+- **Show daily listening patterns**
+- **Show yearly statistics**
+- **Show daily playtime statistics**
 - **Show analysis of most used devices**
 - **Compare statistics between different periods**
 - **Show statistical graphs**
@@ -64,6 +69,10 @@ To ensure accurate and comprehensive results, it is crucial to request your comp
 
 - When requesting your data on Spotify's privacy page, select the option for "Extended playback history."
 - This will include your entire listening history from the creation of your account.
+
+## Export to Excel
+
+The program allows you to export your Spotify statistics to an Excel file for more in-depth analysis. Simply choose the "Export statistics to Excel" option from the dropdown menu and follow the on-screen instructions.
 
 ## License
 
