@@ -2,6 +2,7 @@ import os
 import json
 import tkinter as tk
 from heapq import nlargest
+from itertools import groupby
 from datetime import datetime
 import matplotlib.pyplot as plt
 from collections import Counter, defaultdict
@@ -40,16 +41,21 @@ class SpotifyAnalyzerApp:
         self.options_var = tk.StringVar(self.root)
         self.options_var.set("Show total of songs listened")
         options_menu = tk.OptionMenu(options_frame, self.options_var,
-                                     "Show total of songs listened",
-                                     "Total time spent listened",
-                                     "Show the top 5 most played songs",
-                                     "Show the top 5 most played artists",
-                                     "Show the average song duration",
-                                     "Show analysis of most used devices",
-                                     "Compare statistics between different periods",
-                                     "Show statistical graphs",
-                                     "Export statistics to Excel",
-                                     "Analyze playback reasons")
+                             "Show total of songs listened",
+                             "Total time spent listened",
+                             "Show first and last played songs",
+                             "Show the top 5 most played songs",
+                             "Show the top 5 most played artists",
+                             "Show the most skipped songs", 
+                             "Show the average song duration",
+                             "Show daily listening patterns",
+                             "Show yearly statistics",
+                             "Show daily playtime statistics",
+                             "Show analysis of most used devices",
+                             "Compare statistics between different periods",
+                             "Show statistical graphs",
+                             "Export statistics to Excel",
+                             "Analyze playback reasons")
         options_menu.config(font=("Arial", 14))
         options_menu.grid(row=0, column=1, padx=10)
 
@@ -90,12 +96,22 @@ class SpotifyAnalyzerApp:
             self.show_total_songs_listened()
         elif selected_option == "Total time spent listened":
             self.show_total_time_listened()
+        elif selected_option == "Show first and last played songs":
+            self.show_first_and_last_played_songs()
         elif selected_option == "Show the top 5 most played songs":
             self.show_top_played_songs()
         elif selected_option == "Show the top 5 most played artists":
             self.show_top_artists()
+        elif selected_option == "Show the most skipped songs":
+            self.show_most_skipped_songs()
         elif selected_option == "Show the average song duration":
             self.show_avg_duration()
+        elif selected_option == "Show daily listening patterns":
+            self.show_daily_listening_patterns()
+        elif selected_option == "Show yearly statistics":
+            self.show_yearly_statistics()
+        elif selected_option == "Show daily playtime statistics":
+            self.show_daily_playtime_statistics()
         elif selected_option == "Show analysis of most used devices":
             self.show_most_used_devices()
         elif selected_option == "Compare statistics between different periods":
@@ -105,7 +121,7 @@ class SpotifyAnalyzerApp:
         elif selected_option == "Export statistics to Excel":
             self.export_to_excel()
         elif selected_option == "Analyze playback reasons":
-            self.analyze_playback_reasons()
+            self.analyze_playback_reasons() 
         else:
             self.results_text.insert(tk.END, "Invalid option. Please choose a valid option.\n")
     
@@ -145,7 +161,30 @@ class SpotifyAnalyzerApp:
 
         results = f"Total time spent listened: {int(total_time_days)} days, {int(total_time_hr)} hours, {int(total_time_min)} minutes, {int(total_time_sec)} seconds\n\n"
         self.show_results(results)
+    
+    def show_first_and_last_played_songs(self):
+    
+        first_song = self.json_data[0]            
+        last_song = self.json_data[-1]
+        first_song_info = self.format_song_info(first_song)
+        last_song_info = self.format_song_info(last_song)
+            
+        results = f"First song played: {first_song_info}\n"
+        results += f"Last song played: {last_song_info}\n"
 
+        self.show_results(results)
+   
+    def format_song_info(self, song):
+        title = song.get('master_metadata_track_name', 'Unknown Title')
+        artist = song.get('master_metadata_album_artist_name', 'Unknown Artist')
+        timestamp_str = song.get('ts', 'Unknown Timestamp')
+
+        timestamp = datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%SZ")
+
+        formatted_timestamp = timestamp.strftime("%Y-%m-%d at %H:%M:%S")
+
+        return f'"{title}" by "{artist}" on {formatted_timestamp}\n'
+    
     def show_top_items(self, data, item_name):
         played_items = defaultdict(int)
         for playback_info in self.json_data:
@@ -166,6 +205,17 @@ class SpotifyAnalyzerApp:
     def show_top_artists(self):
         self.show_top_items("master_metadata_album_artist_name", "Artist")
 
+    def show_most_skipped_songs(self):
+        skipped_songs = [info["master_metadata_track_name"] for info in self.json_data if info.get("skipped")]
+        skipped_songs_counter = Counter(skipped_songs)
+        top_skipped_songs = nlargest(5, skipped_songs_counter.items(), key=lambda x: x[1])
+        
+        results = f"Top 5 most skipped songs:\n"
+        for idx, (song, skips) in enumerate(top_skipped_songs, start=1):
+            results += f"{idx}. {song}, Skips: {skips}\n"
+        results += "\n"
+        self.show_results(results)
+    
     def show_avg_duration(self):
         total_durations = sum(info["ms_played"] for info in self.json_data)
         avg_duration_ms = total_durations / len(self.json_data)
@@ -174,17 +224,59 @@ class SpotifyAnalyzerApp:
         results = f"Average song duration: {avg_duration_minutes:.2f} minutes\n\n"
         self.show_results(results)
 
+    def show_daily_listening_patterns(self):
+        timestamps = [datetime.strptime(info["ts"], "%Y-%m-%dT%H:%M:%SZ") for info in self.json_data]
+        timestamps.sort()
+
+        daily_patterns = defaultdict(int)
+        for day, plays in groupby(timestamps, key=lambda x: x.date()):
+            daily_patterns[day] += len(list(plays))
+
+        results = "Daily listening patterns:\n"
+        for day, plays in daily_patterns.items():
+            results += f"{day}: {plays} plays\n"
+
+        self.show_results(results)
+
+    def show_yearly_statistics(self):
+        years = [datetime.strptime(info.get("ts"), "%Y-%m-%dT%H:%M:%SZ").year for info in self.json_data]
+        year_counter = Counter(years)
+
+        results = "Listening statistics by year:\n"
+        for year, plays in sorted(year_counter.items()):
+            results += f"{year}: {plays} plays\n"
+        results += "\n"
+        self.show_results(results)
+
+    def show_daily_playtime_statistics(self):
+        playtimes = [info.get("ms_played", 0) for info in self.json_data]
+        playtimes = [playtime / (1000 * 60 * 60) for playtime in playtimes]  
+
+        daily_playtime = defaultdict(float)
+        for day, playtimes_group in groupby(zip(self.json_data, playtimes), key=lambda x: datetime.strptime(x[0]["ts"], "%Y-%m-%dT%H:%M:%SZ").date()):
+            total_playtime = sum(playtime for _, playtime in playtimes_group)
+            daily_playtime[day.strftime("%A")] += total_playtime
+
+        results = "Daily playtime statistics:\n"
+        for day, total_playtime in daily_playtime.items():
+            results += f"{day}: {total_playtime:.2f} hours\n"
+        results += "\n"
+        self.show_results(results)
+    
     def show_most_used_devices(self):
         used_devices = Counter(info["platform"] for info in self.json_data)
         results = "Analysis of most used devices:\n"
-        for device, count in used_devices.most_common():
-            results += f"{device}: {count} plays\n"
+        
+        for idx, (device, count) in enumerate(used_devices.most_common(), start=1):
+            results += f"{idx}. {device}: {count} plays\n"
+        
         results += "\n"
         self.show_results(results)
-        used_devices = Counter(info["platform"] for info in self.json_data)
+        
         self.results_text.insert(tk.END, "Analysis of most used devices:\n")
-        for device, count in used_devices.most_common():
-            self.results_text.insert(tk.END, f"{device}: {count} plays\n")
+        for idx, (device, count) in enumerate(used_devices.most_common(), start=1):
+            self.results_text.insert(tk.END, f"{idx}. {device}: {count} plays\n")
+        
         self.results_text.insert(tk.END, "\n")
 
     def compare_periods(self):
