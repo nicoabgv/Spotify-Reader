@@ -6,7 +6,7 @@ from itertools import groupby
 from datetime import datetime
 import matplotlib.pyplot as plt
 from collections import Counter, defaultdict
-from tkinter import filedialog, simpledialog
+from tkinter import filedialog
 import openpyxl
 
 class SpotifyAnalyzerApp:
@@ -52,10 +52,9 @@ class SpotifyAnalyzerApp:
                              "Show yearly statistics",
                              "Show daily playtime statistics",
                              "Show analysis of most used devices",
-                             "Compare statistics between different periods",
                              "Show statistical graphs",
-                             "Export statistics to Excel",
-                             "Analyze playback reasons")
+                             "Analyze playback reasons",
+                             "Export statistics to Excel")
         options_menu.config(font=("Arial", 14))
         options_menu.grid(row=0, column=1, padx=10)
 
@@ -114,14 +113,12 @@ class SpotifyAnalyzerApp:
             self.show_daily_playtime_statistics()
         elif selected_option == "Show analysis of most used devices":
             self.show_most_used_devices()
-        elif selected_option == "Compare statistics between different periods":
-            self.compare_periods()
         elif selected_option == "Show statistical graphs":
             self.show_graphs()
-        elif selected_option == "Export statistics to Excel":
-            self.export_to_excel()
         elif selected_option == "Analyze playback reasons":
-            self.analyze_playback_reasons() 
+            self.analyze_playback_reasons()
+        elif selected_option == "Export statistics to Excel":
+            self.export_to_excel() 
         else:
             self.results_text.insert(tk.END, "Invalid option. Please choose a valid option.\n")
     
@@ -188,7 +185,7 @@ class SpotifyAnalyzerApp:
     def show_top_items(self, data, item_name):
         played_items = defaultdict(int)
         for playback_info in self.json_data:
-            item = playback_info[data]
+            item = playback_info[data] if playback_info[data] is not None else "Unknown"
             played_items[item] += 1
 
         top_played_items = nlargest(5, played_items.items(), key=lambda x: x[1])
@@ -277,80 +274,6 @@ class SpotifyAnalyzerApp:
         for idx, (device, count) in enumerate(used_devices.most_common(), start=1):
             self.results_text.insert(tk.END, f"{idx}. {device}: {count} plays\n")
         
-        self.results_text.insert(tk.END, "\n")
-
-    def compare_periods(self):
-        all_dates = [datetime.strptime(info["ts"], '%Y-%m-%dT%H:%M:%SZ').strftime('%Y-%m') for info in self.json_data]
-        unique_dates = set(all_dates)
-
-        results = "Available dates:\n"
-        for date in sorted(unique_dates):
-            results += f"{date}\n"
-
-        self.show_results(results)
-
-        start_period = self.get_valid_period("Enter the start period (e.g., '2023-01'): ")
-
-        if start_period is None:
-            self.show_results("Operation canceled by the user.\n")
-            return
-
-        end_period = self.get_valid_period("Enter the end period (e.g., '2023-05'): ")
-
-        if end_period is None:
-            self.show_results("Operation canceled by the user.\n")
-            return
-
-        self.clear_dates()
-
-        period_plays = defaultdict(int)
-        for info in self.json_data:
-            ts = datetime.strptime(info["ts"], '%Y-%m-%dT%H:%M:%SZ')
-            period_key = ts.strftime('%Y-%m')
-            period_plays[period_key] += 1
-
-        plays_start_period = period_plays[start_period.strftime('%Y-%m')]
-        plays_end_period = period_plays[end_period.strftime('%Y-%m')]
-
-        results = f"Plays in {start_period.strftime('%B %Y')}: {plays_start_period}\n"
-        results += f"Plays in {end_period.strftime('%B %Y')}: {plays_end_period}\n"
-        results += f"Difference: {abs(plays_end_period - plays_start_period)} plays\n"
-
-        self.show_results(results)
-        
-    def get_valid_period(self, prompt):
-        while True:
-            period_input = simpledialog.askstring("Enter Period", prompt)
-            if period_input is None:
-                return None
-
-            try:
-                period = datetime.strptime(period_input, '%Y-%m')
-                return period
-            except ValueError:
-                tk.messagebox.showerror("Invalid Input", "Invalid date format. Please enter a valid period (YYYY-MM)")
-            
-    def clear_dates(self):
-        self.results_text.delete("1.0", tk.END)
-        
-    def show_graphs(self):
-        graph_options = {
-            "1": ("show_top_played_songs_graph", "Show Top Played Songs"),
-            "2": ("show_top_artists_graph", "Show Top Artists"),
-            "3": ("show_playback_time_distribution_graph", "Show Playback Time Distribution"),
-            "4": ("show_playback_trends_graph", "Show Playback Trends"),
-        }
-
-        graph_options_window = tk.Toplevel(self.root)
-        graph_options_window.title("Graph Options")
-
-        label = tk.Label(graph_options_window, text="Choose a graph to display:")
-        label.pack(pady=10)
-
-        for key, (_, label) in graph_options.items():
-            button = tk.Button(graph_options_window, text=label, command=lambda key=key: self.display_graph(graph_options[key]))
-            button.pack()
-
     def display_graph(self, graph_option):
         graph_function_name, _ = graph_option
         graph_function = getattr(self, graph_function_name)
