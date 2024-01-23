@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from collections import Counter, defaultdict
 from tkinter import filedialog
 import openpyxl
+import calendar
 
 class SpotifyAnalyzerApp:
     def __init__(self, root):
@@ -250,16 +251,19 @@ class SpotifyAnalyzerApp:
         playtimes = [playtime / (1000 * 60 * 60) for playtime in playtimes]  
 
         daily_playtime = defaultdict(float)
+
         for day, playtimes_group in groupby(zip(self.json_data, playtimes), key=lambda x: datetime.strptime(x[0]["ts"], "%Y-%m-%dT%H:%M:%SZ").date()):
             total_playtime = sum(playtime for _, playtime in playtimes_group)
             daily_playtime[day.strftime("%A")] += total_playtime
 
+        sorted_daily_playtime = dict(sorted(daily_playtime.items(), key=lambda x: list(calendar.day_name).index(x[0])))
+
         results = "Daily playtime statistics:\n"
-        for day, total_playtime in daily_playtime.items():
+        for day, total_playtime in sorted_daily_playtime.items():
             results += f"{day}: {total_playtime:.2f} hours\n"
         results += "\n"
         self.show_results(results)
-    
+
     def show_most_used_devices(self):
         used_devices = Counter(info["platform"] for info in self.json_data)
         results = "Analysis of most used devices:\n"
@@ -273,7 +277,25 @@ class SpotifyAnalyzerApp:
         self.results_text.insert(tk.END, "Analysis of most used devices:\n")
         for idx, (device, count) in enumerate(used_devices.most_common(), start=1):
             self.results_text.insert(tk.END, f"{idx}. {device}: {count} plays\n")
-        
+       
+    def show_graphs(self):
+        graph_options = {
+            "1": ("show_top_played_songs_graph", "Show Top Played Songs"),
+            "2": ("show_top_artists_graph", "Show Top Artists"),
+            "3": ("show_playback_time_distribution_graph", "Show Playback Time Distribution"),
+            "4": ("show_playback_trends_graph", "Show Playback Trends"),
+        }
+
+        graph_options_window = tk.Toplevel(self.root)
+        graph_options_window.title("Graph Options")
+
+        label = tk.Label(graph_options_window, text="Choose a graph to display:")
+        label.pack(pady=10)
+
+        for key, (_, label) in graph_options.items():
+            button = tk.Button(graph_options_window, text=label, command=lambda key=key: self.display_graph(graph_options[key]))
+            button.pack()
+     
     def display_graph(self, graph_option):
         graph_function_name, _ = graph_option
         graph_function = getattr(self, graph_function_name)
