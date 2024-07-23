@@ -1,14 +1,15 @@
 import os
 import json
+import openpyxl # type: ignore
+import calendar
 import tkinter as tk
+import matplotlib.pyplot as plt # type: ignore
+
 from heapq import nlargest
 from itertools import groupby
 from datetime import datetime
-import matplotlib.pyplot as plt
-from collections import Counter, defaultdict
 from tkinter import filedialog
-import openpyxl
-import calendar
+from collections import Counter, defaultdict
 
 class SpotifyAnalyzerApp:
     def __init__(self, root):
