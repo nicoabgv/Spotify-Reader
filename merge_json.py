@@ -3,16 +3,6 @@ import os
 import argparse
 
 def merge_and_sort_json(input_folder, output_file):
-    """
-    Merge and sort Spotify JSON files from the input_folder into a unified and sorted output_file.
-
-    Parameters:
-        input_folder (str): Path to the folder containing JSON files.
-        output_file (str): Path to the output JSON file.
-
-    Returns:
-        None
-    """
     all_data = []
 
     json_files = [f for f in os.listdir(input_folder) if f.endswith('.json')]
